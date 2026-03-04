@@ -2,3 +2,6 @@ shiny
 shinylive
 seaborn
 faicons
+pandas
+openpyxl
+pyarrow
