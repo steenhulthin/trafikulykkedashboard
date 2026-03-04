@@ -54,8 +54,9 @@ app_ui = ui.page_sidebar(
     *[
         ui.card(
             ui.card_header(f"{injury} (all years)"),
-            output_widget(f"incidence_trend_{idx}"),
-            full_screen=True,
+            output_widget(f"incidence_trend_{idx}", height="640px"),
+            full_screen=False,
+            style="min-height: 700px; max-height: 820px; overflow-y: auto;",
         )
         for idx, injury in enumerate(INJURY_ORDER)
     ],
@@ -199,7 +200,7 @@ def server(input, output, session):
         fig.update_layout(
             legend_title_text="Sex | Transport mode",
             margin=dict(l=40, r=20, t=40, b=40),
-            height=360,
+            height=620,
         )
         fig.update_xaxes(
             title="Year",
