@@ -9,32 +9,52 @@ from shared import age_choices, app_dir, df, transport_choices
 INJURY_ORDER = ["Dræbte", "Alvorligt tilskadekomne", "Lettere tilskadekomne"]
 SEX_ORDER = ["Kvinder", "Mænd"]
 INJURY_ICONS = ["skull-crossbones", "triangle-exclamation", "bandage"]
+INJURY_ICON_COLORS = ["#000000", "#B8860B", "#2E8B57"]
+
+
+def injury_showcase_icon(idx: int):
+    return ui.span(
+        icon_svg(INJURY_ICONS[idx]),
+        style=f"color: {INJURY_ICON_COLORS[idx]};",
+    )
+
+
+def build_about_text() -> str:
+    about_path = app_dir / "about.md"
+
+    about_md = about_path.read_text(encoding="utf-8")
+
+    return (about_md)
+
+
+ABOUT_TEXT = build_about_text()
 
 
 app_ui = ui.page_sidebar(
     ui.sidebar(
         ui.input_selectize(
             "ages",
-            "Age group",
+            "Aldersgruppe",
             choices=age_choices,
             selected=age_choices,
             multiple=True,
         ),
         ui.input_selectize(
             "transport_modes",
-            "Transport mode",
+            "Transportmiddel",
             choices=transport_choices,
             selected=transport_choices,
             multiple=True,
         ),
-        title="Filter controls",
+        ui.input_action_button("about_btn", "Om dashboardet"),
+        title="Filtre",
     ),
     ui.layout_columns(
         *[
             ui.value_box(
                 f"{injury} - Kvinder",
                 ui.output_text(f"kpi_women_{idx}"),
-                showcase=icon_svg(INJURY_ICONS[idx]),
+                showcase=injury_showcase_icon(idx),
             )
             for idx, injury in enumerate(INJURY_ORDER)
         ],
@@ -45,7 +65,7 @@ app_ui = ui.page_sidebar(
             ui.value_box(
                 f"{injury} - Mænd",
                 ui.output_text(f"kpi_men_{idx}"),
-                showcase=icon_svg(INJURY_ICONS[idx]),
+                showcase=injury_showcase_icon(idx),
             )
             for idx, injury in enumerate(INJURY_ORDER)
         ],
@@ -53,7 +73,7 @@ app_ui = ui.page_sidebar(
     ),
     *[
         ui.card(
-            ui.card_header(f"{injury} (all years)"),
+            ui.card_header(f"{injury} (alle år)"),
             output_widget(f"incidence_trend_{idx}", height="640px"),
             full_screen=False,
             style="min-height: 700px; max-height: 820px; overflow-y: auto;",
@@ -61,7 +81,7 @@ app_ui = ui.page_sidebar(
         for idx, injury in enumerate(INJURY_ORDER)
     ],
     ui.include_css(app_dir / "styles.css"),
-    title="Traffic Accident Incidence Dashboard",
+    title="Dashboard for trafikulykker",
     fillable=True,
 )
 
@@ -99,13 +119,26 @@ def server(input, output, session):
     blue_shades = ["#1f77b4", "#2a6fbb", "#3a7dc4", "#4a8acc", "#5a98d4", "#6aa5dc"]
     red_shades = ["#d62728", "#d64a4a", "#de5f5f", "#e57575", "#ec8b8b", "#f2a1a1"]
 
+    @reactive.effect
+    @reactive.event(input.about_btn)
+    def _show_about_modal():
+        ui.modal_show(
+            ui.modal(
+                ui.markdown(ABOUT_TEXT),
+                title="Om dashboardet",
+                easy_close=True,
+                size="l",
+                footer=ui.modal_button("Luk"),
+            )
+        )
+
     def sex_short(name: str) -> str:
-        text = name.lower()
+        text = str(name).lower()
         if "mænd" in text or "men" in text:
             return "Mænd"
         if "kvinder" in text or "women" in text:
             return "Kvinder"
-        return name
+        return str(name)
 
     def series_color(sex_label: str, transport_mode: str) -> str:
         palette = blue_shades if sex_label == "Mænd" else red_shades
@@ -127,13 +160,13 @@ def server(input, output, session):
     def kpi_value(sex_label: str, injury: str) -> str:
         data = filtered_df().copy()
         if data.empty:
-            return "No data"
+            return "Ingen data"
 
         data["sex"] = data["sex_indicator"].map(sex_short)
         data = data[(data["sex"] == sex_label) & (data["injury_severity"] == injury)]
         if data.empty:
-            return "No data"
-        return f"{data['incidence_per_100k'].mean():.2f} per 100,000"
+            return "Ingen data"
+        return f"{data['incidence_per_100k'].mean():.2f} pr. 100.000"
 
     def build_injury_figure(injury: str) -> go.Figure:
         data = filtered_df().copy()
@@ -146,7 +179,7 @@ def server(input, output, session):
                 y=0.5,
                 xref="paper",
                 yref="paper",
-                text="No data for selected filters",
+                text="Ingen data for de valgte filtre",
                 showarrow=False,
             )
             fig.update_xaxes(visible=False)
@@ -192,23 +225,26 @@ def server(input, output, session):
                         name=f"{sex} | {transport_legend_label.get(transport, transport)}",
                         legendgroup=f"{transport}_{sex}",
                         line=dict(color=series_color(sex, transport)),
-                        marker=dict(symbol=transport_marker_symbol.get(transport, "circle"), size=9),
+                        marker=dict(
+                            symbol=transport_marker_symbol.get(transport, "circle"),
+                            size=9,
+                        ),
                         connectgaps=False,
                     )
                 )
 
         fig.update_layout(
-            legend_title_text="Sex | Transport mode",
+            legend_title_text="Køn | Transportmiddel",
             margin=dict(l=40, r=20, t=40, b=40),
             height=620,
         )
         fig.update_xaxes(
-            title="Year",
+            title="År",
             range=[min_year, max_year],
             dtick=2,
             tickmode="linear",
         )
-        fig.update_yaxes(title="Average incidence per 100,000")
+        fig.update_yaxes(title="Gennemsnitlig incidens pr. 100.000")
         return fig
 
     @output(id="incidence_trend_0")
