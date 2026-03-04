@@ -1,0 +1,4 @@
+shiny
+shinylive
+seaborn
+faicons
