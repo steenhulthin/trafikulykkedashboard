@@ -1,7 +1,8 @@
 shiny
 shinylive
-seaborn
 faicons
 pandas
 openpyxl
 pyarrow
+plotly
+shinywidgets
