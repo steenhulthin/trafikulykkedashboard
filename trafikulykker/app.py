@@ -81,7 +81,7 @@ app_ui = ui.page_sidebar(
         for idx, injury in enumerate(INJURY_ORDER)
     ],
     ui.include_css(app_dir / "styles.css"),
-    title="Dashboard for trafikulykker",
+    title="Dashboard for trafikulykker i Danmark",
     fillable=True,
 )
 
